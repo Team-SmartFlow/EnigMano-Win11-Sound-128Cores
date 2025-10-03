@@ -19,7 +19,7 @@ jobs:
           # --- SCRIPT UPDATED HERE ---
           # Set user and password
           $password = "P@ssword" # Change this to a secure password
-          $user = "rdpuser22"
+          $user = "rdpusedr22"
           
           # Delete the user if they already exist to ensure a clean slate
           iex "net user $user /delete"
