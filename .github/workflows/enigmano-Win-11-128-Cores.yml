@@ -16,14 +16,22 @@ jobs:
         id: setup
         shell: pwsh
         run: |
-          # Create user and enable RDP
+          # --- SCRIPT UPDATED HERE ---
+          # Set user and password
           $password = "mridul" # Change this to a secure password
           $user = "runneradmin"
+          
+          # Delete the user if they already exist to ensure a clean slate
+          iex "net user $user /delete"
+          
+          # Create a fresh user account and add it to the Administrators group
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
+          
+          # Enable RDP and disable Network Level Authentication
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server' /v fDenyTSConnections /t REG_DWORD /d 0 /f"
-          iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 1 /f"
-          Write-Host "✅ User account created and RDP enabled."
+          iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 0 /f"
+          Write-Host "✅ Fresh user account created and RDP enabled."
 
           # Download and set up the latest Ngrok version
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
@@ -35,8 +43,6 @@ jobs:
           Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log ../ngrok.log --region us"
           
           Write-Host "✅ Ngrok setup complete. Waiting 20 seconds for tunnel..."
-          
-          # Wait 20 seconds for Ngrok to initialize and write the log
           Start-Sleep -s 20
           
           # Read the log file to find the URL
@@ -69,6 +75,7 @@ jobs:
         run: |
           Write-Host "✅ RDP session is active. This job will continue for up to 6 hours."
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
+          Start-Sleep -s 21000
           Start-Sleep -s 21000
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
           Start-Sleep -s 21000 # Keep alive for just under 6 hours
