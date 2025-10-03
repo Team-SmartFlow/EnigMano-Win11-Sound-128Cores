@@ -12,63 +12,63 @@ jobs:
       NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAHZAIB }}
 
     steps:
-      - name: "🛡️ Create User and Enable RDP"
+      - name: "🚀 Setup RDP and Start Ngrok"
+        id: setup
         shell: pwsh
         run: |
-          $password = "jj" # Change this to a secure password
+          # Create user and enable RDP
+          $password = "your" # Change this to a secure password
           $user = "runneradmin"
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
-          
-          # The following commands enable Remote Desktop
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server' /v fDenyTSConnections /t REG_DWORD /d 0 /f"
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 1 /f"
           Write-Host "✅ User account created and RDP enabled."
 
-      - name: "☁️ Download and Configure Ngrok"
-        shell: pwsh
-        run: |
-          # Download and unzip Ngrok into a dedicated 'ngrok' folder
+          # Download and set up Ngrok
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive ngrok.zip -DestinationPath "ngrok"
-          
-          # Move into the ngrok directory
           cd ngrok
 
-          # Verify ngrok.exe exists before proceeding
-          if (-not (Test-Path "./ngrok.exe")) {
-            Write-Error "❌ ngrok.exe not found after extraction!"
-            exit 1
-          }
-          
-          # Authenticate and start the tunnel, outputting the log to the parent directory
+          # Authenticate and start the tunnel
           ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
           ./ngrok.exe tcp 3389 --log "stdout" > ../ngrok.log &
           
           Write-Host "✅ Ngrok setup complete. Waiting for tunnel..."
-          Start-Sleep -s 10
-
-      - name: "🔗 Get RDP Connection Details"
-        shell: pwsh
-        run: |
-          # Wait for the ngrok log and extract the connection URL
-          $logContent = Get-Content -Path ngrok.log -Wait -Tail 10
-          $rdpConnection = ($logContent | Select-String -Pattern "url=(tcp://.+)" | Select-Object -First 1).Matches.Groups[1].Value
           
-          if ($rdpConnection) {
-            Write-Host " "
-            Write-Host "✅ RDP Connection Ready!"
-            Write-Host "   Connect to: $rdpConnection"
-            Write-Host "   Username: runneradmin"
-            Write-Host "   Password: your-strong-password-here" # The password you set above
-            Write-Host " "
+          # Wait 15 seconds for Ngrok to initialize and write the log
+          Start-Sleep -s 15
+          
+          # Read the log file to find the URL
+          if (Test-Path -Path "../ngrok.log") {
+              $logContent = Get-Content -Path "../ngrok.log"
+              Write-Host "--- Ngrok Log Content ---"
+              $logContent | ForEach-Object { Write-Host $_ }
+              Write-Host "--- End of Ngrok Log ---"
+
+              $rdpConnection = ($logContent | Select-String -Pattern "url=(tcp://.+)" | Select-Object -First 1).Matches.Groups[1].Value
+              
+              if ($rdpConnection) {
+                  Write-Host " "
+                  Write-Host "✅ RDP Connection Ready!"
+                  Write-Host "   Connect to: $rdpConnection"
+                  Write-Host "   Username: runneradmin"
+                  Write-Host "   Password: your-strong-password-here" # The password you set above
+                  Write-Host " "
+              } else {
+                  Write-Error "❌ Could not find Ngrok URL in the log after 15 seconds. Ngrok might have failed to start. Check the log content above."
+                  exit 1
+              }
           } else {
-            Write-Error "❌ Could not find Ngrok URL in the log. Check the previous step for errors."
+              Write-Error "❌ ngrok.log file was not created."
+              exit 1
           }
 
       - name: "⏳ Keep RDP Session Alive"
         shell: pwsh
         run: |
-          Write-Host "✅ RDP session is active."
+          Write-Host "✅ RDP session is active. This job will continue for up to 6 hours."
+          Write-Host "   To end the session, cancel the GitHub Actions workflow."
+          Start-Sleep -s 21000 # Keep alive for just under 6 hours
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
           Start-Sleep -s 21000 # Keep alive for just under 6 hours
