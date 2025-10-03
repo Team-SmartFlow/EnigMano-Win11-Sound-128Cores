@@ -17,7 +17,7 @@ jobs:
         shell: pwsh
         run: |
           # Create user and enable RDP
-          $password = "your" # Change this to a secure password
+          $password = "your-strong-password-here" # Change this to a secure password
           $user = "runneradmin"
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
@@ -25,8 +25,8 @@ jobs:
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 1 /f"
           Write-Host "✅ User account created and RDP enabled."
 
-          # Download and set up Ngrok
-          Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
+          # Download and set up the LATEST Ngrok version
+          Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive ngrok.zip -DestinationPath "ngrok"
           cd ngrok
 
