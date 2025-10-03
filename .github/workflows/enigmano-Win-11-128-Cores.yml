@@ -12,7 +12,7 @@ jobs:
       NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAHZAIB }}
 
     steps:
-      - name: "🚀 Setup RDP, Firewall, and Start Ngrok"
+      - name: "🚀 Setup RDP and Start Ngrok"
         id: setup
         shell: pwsh
         run: |
@@ -28,13 +28,9 @@ jobs:
           # Download and set up the latest Ngrok version
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive ngrok.zip -DestinationPath "ngrok"
-          
-          # Add a firewall rule for Ngrok
-          New-NetFirewallRule -DisplayName "Allow ngrok" -Direction Inbound -Program "D:\a\${{ github.repository }}\${{ github.repository }}\ngrok\ngrok.exe" -Action Allow
-          
           cd ngrok
 
-          # Authenticate and start the tunnel in a specific region
+          # Authenticate and start the tunnel
           ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
           Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log ../ngrok.log --region us"
           
