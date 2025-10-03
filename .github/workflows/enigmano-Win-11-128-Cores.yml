@@ -25,14 +25,14 @@ jobs:
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 1 /f"
           Write-Host "✅ User account created and RDP enabled."
 
-          # Download and set up the LATEST Ngrok version
+          # Download and set up the latest Ngrok version
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive ngrok.zip -DestinationPath "ngrok"
           cd ngrok
 
-          # Authenticate and start the tunnel
+          # Authenticate and start the tunnel with correct logging
           ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
-          ./ngrok.exe tcp 3389 --log "stdout" > ../ngrok.log &
+          ./ngrok.exe tcp 3389 --log ../ngrok.log &
           
           Write-Host "✅ Ngrok setup complete. Waiting for tunnel..."
           
