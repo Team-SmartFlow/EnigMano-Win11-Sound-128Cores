@@ -1,4 +1,4 @@
-name: "⚡ Custom RDP Session (4-Core, 16GB RAM)"
+name: "⚡ Custom RDP Session (4-Core, 16GB RAM) - Corrected"
 
 on:
   workflow_dispatch:
@@ -6,51 +6,69 @@ on:
 jobs:
   build:
     name: "🚀 Start Windows RDP Session"
-    runs-on: windows-latest # This runner provides 4-cores and 16GB RAM on public repos
+    runs-on: windows-latest
 
     env:
-      NGROK_SHAHZIAB: ${{ secrets.NGROK_SHAHZAIB }} # Make sure to set this secret in your repository
+      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAHZAIB }}
 
     steps:
-      - name: "☁️ Cloning Ngrok and starting RDP setup"
+      - name: "🛡️ Create User and Enable RDP"
         shell: pwsh
         run: |
-          # Create a user account
           $password = "your-strong-password-here" # Change this to a secure password
           $user = "runneradmin"
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
-
-          # Enable RDP
+          
+          # The following commands enable Remote Desktop
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server' /v fDenyTSConnections /t REG_DWORD /d 0 /f"
           iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 1 /f"
+          Write-Host "✅ User account created and RDP enabled."
 
-          # Download and set up Ngrok
+      - name: "☁️ Download and Configure Ngrok"
+        shell: pwsh
+        run: |
+          # Download and unzip Ngrok into a dedicated 'ngrok' folder
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-          Expand-Archive ngrok.zip
-          ./ngrok.exe authtoken $env:NGROK_SHAHZAIB
-          ./ngrok.exe tcp 3389 --log "stdout" > ngrok.log &
+          Expand-Archive ngrok.zip -DestinationPath "ngrok"
+          
+          # Move into the ngrok directory
+          cd ngrok
 
-          Write-Host "✅ RDP setup complete. Waiting for Ngrok tunnel to establish..."
-          Start-Sleep -s 10 # Wait for ngrok to start
+          # Verify ngrok.exe exists before proceeding
+          if (-not (Test-Path "./ngrok.exe")) {
+            Write-Error "❌ ngrok.exe not found after extraction!"
+            exit 1
+          }
+          
+          # Authenticate and start the tunnel, outputting the log to the parent directory
+          ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
+          ./ngrok.exe tcp 3389 --log "stdout" > ../ngrok.log &
+          
+          Write-Host "✅ Ngrok setup complete. Waiting for tunnel..."
+          Start-Sleep -s 10
 
       - name: "🔗 Get RDP Connection Details"
         shell: pwsh
         run: |
+          # Wait for the ngrok log and extract the connection URL
           $logContent = Get-Content -Path ngrok.log -Wait -Tail 10
           $rdpConnection = ($logContent | Select-String -Pattern "url=(tcp://.+)" | Select-Object -First 1).Matches.Groups[1].Value
+          
           if ($rdpConnection) {
-            Write-Host "✅ RDP Connection URL: $rdpConnection"
-            Write-Host "   You can connect using the above URL."
+            Write-Host " "
+            Write-Host "✅ RDP Connection Ready!"
+            Write-Host "   Connect to: $rdpConnection"
             Write-Host "   Username: runneradmin"
             Write-Host "   Password: your-strong-password-here" # The password you set above
+            Write-Host " "
           } else {
-            Write-Error "❌ Could not find Ngrok URL in the log."
+            Write-Error "❌ Could not find Ngrok URL in the log. Check the previous step for errors."
           }
 
       - name: "⏳ Keep RDP Session Alive"
         shell: pwsh
         run: |
-          Write-Host "✅ RDP session is running. This job will continue to run to keep the session alive."
+          Write-Host "✅ RDP session is active."
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
-          Start-Sleep -s 3600 # Keep alive for 1 hour (max is 6 hours for public repos)
+          Start-Sleep -s 21000 # Keep alive for just under 6 hours
