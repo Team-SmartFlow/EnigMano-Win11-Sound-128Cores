@@ -9,7 +9,7 @@ jobs:
     runs-on: windows-latest # This runner provides 4-cores and 16GB RAM on public repos
 
     env:
-      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAZAIB }} # Make sure to set this secret in your repository
+      NGROK_SHAHZIAB: ${{ secrets.NGROK_SHAHZAIB }} # Make sure to set this secret in your repository
 
     steps:
       - name: "☁️ Cloning Ngrok and starting RDP setup"
@@ -28,7 +28,7 @@ jobs:
           # Download and set up Ngrok
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive ngrok.zip
-          ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
+          ./ngrok.exe authtoken $env:NGROK_SHAHZAIB
           ./ngrok.exe tcp 3389 --log "stdout" > ngrok.log &
 
           Write-Host "✅ RDP setup complete. Waiting for Ngrok tunnel to establish..."
