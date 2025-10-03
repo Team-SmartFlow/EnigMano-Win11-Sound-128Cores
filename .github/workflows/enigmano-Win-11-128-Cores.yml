@@ -17,7 +17,7 @@ jobs:
         shell: pwsh
         run: |
           # Create user and enable RDP
-          $password = "Mridul" # Change this to a secure password
+          $password = "mridul" # Change this to a secure password
           $user = "runneradmin"
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
@@ -57,7 +57,7 @@ jobs:
                   Write-Host "✅ RDP Connection Ready!"
                   Write-Host "   Connect to: $rdpConnection"
                   Write-Host "   Username: runneradmin"
-                  Write-Host "   Password: Mridul"
+                  Write-Host "   Password: mridul"
                   Write-Host " "
               } else {
                   Write-Error "❌ CRITICAL: Could not find Ngrok URL in the log. The tunnel failed to start. Check the log for errors."
