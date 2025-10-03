@@ -15,7 +15,7 @@ jobs:
       - name: "🛡️ Create User and Enable RDP"
         shell: pwsh
         run: |
-          $password = "your-strong-password-here" # Change this to a secure password
+          $password = "jj" # Change this to a secure password
           $user = "runneradmin"
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
