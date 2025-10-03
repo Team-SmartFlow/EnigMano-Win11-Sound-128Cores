@@ -12,12 +12,12 @@ jobs:
       NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAHZAIB }}
 
     steps:
-      - name: "🚀 Setup RDP and Start Ngrok"
+      - name: "🚀 Setup RDP, Firewall, and Start Ngrok"
         id: setup
         shell: pwsh
         run: |
           # Create user and enable RDP
-          $password = "mridul" # Change this to a secure password
+          $password = "your-strong-password-here" # Change this to a secure password
           $user = "runneradmin"
           iex "net user /add $user $password"
           iex "net localgroup administrators $user /add"
@@ -28,16 +28,20 @@ jobs:
           # Download and set up the latest Ngrok version
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive ngrok.zip -DestinationPath "ngrok"
+          
+          # Add a firewall rule for Ngrok
+          New-NetFirewallRule -DisplayName "Allow ngrok" -Direction Inbound -Program "D:\a\${{ github.repository }}\${{ github.repository }}\ngrok\ngrok.exe" -Action Allow
+          
           cd ngrok
 
-          # Authenticate and start the tunnel with correct logging
+          # Authenticate and start the tunnel in a specific region
           ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
-          ./ngrok.exe tcp 3389 --log ../ngrok.log &
+          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log ../ngrok.log --region us"
           
-          Write-Host "✅ Ngrok setup complete. Waiting for tunnel..."
+          Write-Host "✅ Ngrok setup complete. Waiting 20 seconds for tunnel..."
           
-          # Wait 15 seconds for Ngrok to initialize and write the log
-          Start-Sleep -s 15
+          # Wait 20 seconds for Ngrok to initialize and write the log
+          Start-Sleep -s 20
           
           # Read the log file to find the URL
           if (Test-Path -Path "../ngrok.log") {
@@ -53,14 +57,14 @@ jobs:
                   Write-Host "✅ RDP Connection Ready!"
                   Write-Host "   Connect to: $rdpConnection"
                   Write-Host "   Username: runneradmin"
-                  Write-Host "   Password: your-strong-password-here" # The password you set above
+                  Write-Host "   Password: your-strong-password-here"
                   Write-Host " "
               } else {
-                  Write-Error "❌ Could not find Ngrok URL in the log after 15 seconds. Ngrok might have failed to start. Check the log content above."
+                  Write-Error "❌ CRITICAL: Could not find Ngrok URL in the log. The tunnel failed to start. Check the log for errors."
                   exit 1
               }
           } else {
-              Write-Error "❌ ngrok.log file was not created."
+              Write-Error "❌ CRITICAL: ngrok.log file was not created. Ngrok failed to launch."
               exit 1
           }
 
@@ -69,6 +73,6 @@ jobs:
         run: |
           Write-Host "✅ RDP session is active. This job will continue for up to 6 hours."
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
-          Start-Sleep -s 21000 # Keep alive for just under 6 hours
+          Start-Sleep -s 21000
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
           Start-Sleep -s 21000 # Keep alive for just under 6 hours
