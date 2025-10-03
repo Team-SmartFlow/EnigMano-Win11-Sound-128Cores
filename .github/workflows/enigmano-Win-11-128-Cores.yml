@@ -1,74 +1,56 @@
-name: "⚡ EnigMano Win11 + 128 Cores Deployment"
+name: "⚡ Custom RDP Session (4-Core, 16GB RAM)"
 
 on:
   workflow_dispatch:
-    inputs:
-      INSTANCE:
-        description: "Instance number to deploy (e.g., 1, 2, 3...)"
-        required: true
-        default: "1"
 
 jobs:
-  deploy-enigmano:
-    name: "🚀 Deploy EnigMano Instance ${{ github.event.inputs.INSTANCE }}"
-    runs-on: windows-11-arm
+  build:
+    name: "🚀 Start Windows RDP Session"
+    runs-on: windows-latest # This runner provides 4-cores and 16GB RAM on public repos
 
     env:
-      INSTANCE_ID: ${{ github.event.inputs.INSTANCE }}
-      SECRET_SHAHZAIB: ${{ secrets.SECRET_SHAHZAIB }}
-      NGROK_SHAHZAIB: ${{ secrets.NGROK_SHAHZAIB }}
-      REPO: ${{ github.repository }}
-      WORKFLOW_FILE: "enigmano-Win-11-128-Cores.yml"
-      DEPLOYMENT_ID: ${{ github.run_id }}
+      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAZAIB }} # Make sure to set this secret in your repository
 
     steps:
-      - name: 📌 Deployment Parameters
+      - name: "☁️ Cloning Ngrok and starting RDP setup"
         shell: pwsh
         run: |
-          $prevInstance = [int]$env:INSTANCE_ID - 1
-          Write-Host "==============================================="
-          Write-Host "🔹 EnigMano Instance     : $env:INSTANCE_ID"
-          Write-Host "🔢 Previous Instance     : $prevInstance"
-          Write-Host "📦 GitHub Repository     : $env:REPO"
-          Write-Host "🔁 Deployment Workflow   : $env:WORKFLOW_FILE"
-          Write-Host "🆔 Deployment ID         : $env:DEPLOYMENT_ID"
-          Write-Host "==============================================="
+          # Create a user account
+          $password = "your-strong-password-here" # Change this to a secure password
+          $user = "runneradmin"
+          iex "net user /add $user $password"
+          iex "net localgroup administrators $user /add"
 
-      - name: 🔐 Validate Secrets
+          # Enable RDP
+          iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server' /v fDenyTSConnections /t REG_DWORD /d 0 /f"
+          iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 1 /f"
+
+          # Download and set up Ngrok
+          Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
+          Expand-Archive ngrok.zip
+          ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
+          ./ngrok.exe tcp 3389 --log "stdout" > ngrok.log &
+
+          Write-Host "✅ RDP setup complete. Waiting for Ngrok tunnel to establish..."
+          Start-Sleep -s 10 # Wait for ngrok to start
+
+      - name: "🔗 Get RDP Connection Details"
         shell: pwsh
         run: |
-          if (-not $env:SECRET_SHAHZAIB) {
-            Write-Error "❌ Missing GitHub Secret: SECRET_SHAHZAIB"
-            exit 1
+          $logContent = Get-Content -Path ngrok.log -Wait -Tail 10
+          $rdpConnection = ($logContent | Select-String -Pattern "url=(tcp://.+)" | Select-Object -First 1).Matches.Groups[1].Value
+          if ($rdpConnection) {
+            Write-Host "✅ RDP Connection URL: $rdpConnection"
+            Write-Host "   You can connect using the above URL."
+            Write-Host "   Username: runneradmin"
+            Write-Host "   Password: your-strong-password-here" # The password you set above
+          } else {
+            Write-Error "❌ Could not find Ngrok URL in the log."
           }
-          if (-not $env:NGROK_SHAHZAIB) {
-            Write-Error "❌ Missing Ngrok Auth Token: NGROK_SHAHZAIB"
-            exit 1
-          }
-          Write-Host "✅ All required secrets validated successfully"
 
-      - name: 📥 Download EnigMano-instance.ps1
+      - name: "⏳ Keep RDP Session Alive"
         shell: pwsh
         run: |
-          $url = "https://gitlab.com/Shahzaib-YT/enigmano-windows-11-with-sound/-/raw/main/EnigMano-Instance.ps1"
-          Write-Host "🌐 Downloading EnigMano-Instance.ps1..."
-          Invoke-WebRequest -Uri $url -OutFile "EnigMano-Instance.ps1" -UseBasicParsing
-          if (!(Test-Path "./EnigMano-Instance.ps1")) {
-            Write-Error "❌ Failed to download EnigMano-Instance.ps1"
-            exit 1
-          }
-          Write-Host "✅ EnigMano-Instance.ps1 downloaded successfully"
-
-      - name: ⚔️ Execute EnigMano Instance Script
-        shell: pwsh
-        run: |
-          Write-Host "🚦 Initiating EnigMano-Instance.ps1"
-          powershell.exe -ExecutionPolicy Bypass -File ".\EnigMano-Instance.ps1"
-
-      - name: 💠 Final Status
-        if: always()
-        shell: pwsh
-        run: |
-          Write-Host "✅ EnigMano Instance $env:INSTANCE_ID completed execution."
-          Write-Host "🔋 Powered by: SHAHZAIB-YT"
-          Write-Host "🏁 EnigMano deployment executed with tactical precision."
+          Write-Host "✅ RDP session is running. This job will continue to run to keep the session alive."
+          Write-Host "   To end the session, cancel the GitHub Actions workflow."
+          Start-Sleep -s 3600 # Keep alive for 1 hour (max is 6 hours for public repos)
