@@ -76,6 +76,5 @@ jobs:
           Write-Host "✅ RDP session is active. This job will continue for up to 6 hours."
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
           Start-Sleep -s 21000
-          Start-Sleep -s 21000
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
           Start-Sleep -s 21000 # Keep alive for just under 6 hours
