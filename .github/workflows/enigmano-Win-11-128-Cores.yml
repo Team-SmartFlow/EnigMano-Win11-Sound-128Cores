@@ -18,7 +18,7 @@ jobs:
         run: |
           # --- SCRIPT UPDATED HERE ---
           # Set user and password
-          $password = "mridul" # Change this to a secure password
+          $password = "P@ssword" # Change this to a secure password
           $user = "rdpuser22"
           
           # Delete the user if they already exist to ensure a clean slate
