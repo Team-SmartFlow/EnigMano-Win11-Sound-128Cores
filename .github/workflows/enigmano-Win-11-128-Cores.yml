@@ -1,12 +1,13 @@
-name: "⚡ Custom RDP Session (4-Core, 16GB RAM) - Corrected"
+name: "⚡ High-Performance RDP Session"
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: "🚀 Start Windows RDP Session"
-    runs-on: windows-latest
+    name: "🚀 Start RDP Session"
+    # This uses the label from the runner you created
+    runs-on: windows-x64 
 
     env:
       NGROK_AUTH_TOKEN: ${{ secrets.NGROK_SHAHZAIB }}
@@ -16,22 +17,19 @@ jobs:
         id: setup
         shell: pwsh
         run: |
-          # --- SCRIPT UPDATED HERE ---
-          # Set user and password
-          $password = "P@ssword" # Change this to a secure password
-          $user = "rdpusedr22"
+          # Set a unique username and a strong password
+          $user = "thor"
+          $password = "P@ssword" # IMPORTANT: Change this to a secure password
           
-          # Delete the user if they already exist to ensure a clean slate
-          iex "net user $user /delete"
+          # Force creation of a new, clean user account every time
+          try { net user $user /delete } catch {}
+          net user $user $password /add
+          net localgroup administrators $user /add
           
-          # Create a fresh user account and add it to the Administrators group
-          iex "net user /add $user $password"
-          iex "net localgroup administrators $user /add"
-          
-          # Enable RDP and disable Network Level Authentication
-          iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server' /v fDenyTSConnections /t REG_DWORD /d 0 /f"
-          iex "reg add 'HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' /v UserAuthentication /t REG_DWORD /d 0 /f"
-          Write-Host "✅ Fresh user account created and RDP enabled."
+          # Enable RDP and disable restrictive security (NLA)
+          reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+          reg add "HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
+          Write-Host "✅ Fresh user account '$user' created and RDP enabled."
 
           # Download and set up the latest Ngrok version
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
@@ -40,7 +38,7 @@ jobs:
 
           # Authenticate and start the tunnel
           ./ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
-          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log ../ngrok.log --region us"
+          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log ../ngrok.log"
           
           Write-Host "✅ Ngrok setup complete. Waiting 20 seconds for tunnel..."
           Start-Sleep -s 20
@@ -58,8 +56,8 @@ jobs:
                   Write-Host " "
                   Write-Host "✅ RDP Connection Ready!"
                   Write-Host "   Connect to: $rdpConnection"
-                  Write-Host "   Username: runneradmin"
-                  Write-Host "   Password: mridul"
+                  Write-Host "   Username: $user"
+                  Write-Host "   Password: $password"
                   Write-Host " "
               } else {
                   Write-Error "❌ CRITICAL: Could not find Ngrok URL in the log. The tunnel failed to start. Check the log for errors."
@@ -70,11 +68,9 @@ jobs:
               exit 1
           }
 
-      - name: "⏳ Keep RDP Session Alive"
+      - name: "⏳ Keep Session Alive"
         shell: pwsh
         run: |
           Write-Host "✅ RDP session is active. This job will continue for up to 6 hours."
           Write-Host "   To end the session, cancel the GitHub Actions workflow."
           Start-Sleep -s 21000
-          Write-Host "   To end the session, cancel the GitHub Actions workflow."
-          Start-Sleep -s 21000 # Keep alive for just under 6 hours
